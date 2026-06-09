@@ -40,10 +40,12 @@ RaspiVoice::~RaspiVoice()
 		delete(i2ssConverter);
 	}
 
+#ifndef NO_RASPICAM
 	if (image_source == 1)
 	{
 		raspiCam.release();
 	}
+#endif
 }
 
 
@@ -71,7 +73,11 @@ void RaspiVoice::init()
 	}
 	else if (image_source == 1) //RaspiCAM
 	{
+#ifndef NO_RASPICAM
 		initRaspiCam();
+#else
+		throw(std::runtime_error("RaspiCam (image_source=1) not compiled in. Use -s2 for USB camera."));
+#endif
 	}
 	else if (image_source >= 2)
 	{
@@ -80,7 +86,7 @@ void RaspiVoice::init()
 
 	if (preview)
 	{
-		cv::namedWindow("RaspiVoice Preview", CV_WINDOW_NORMAL);
+		cv::namedWindow("RaspiVoice Preview", cv::WINDOW_NORMAL);
 	}
 
 	//Test read + process one image:
@@ -137,7 +143,7 @@ void RaspiVoice::initFileImage()
 		std::cout << "Checking input file " << opt.input_filename << std::endl;
 
 		//Test read:
-		cv::Mat mat = cv::imread(opt.input_filename.c_str(), CV_LOAD_IMAGE_GRAYSCALE);
+		cv::Mat mat = cv::imread(opt.input_filename.c_str(), cv::IMREAD_GRAYSCALE);
 
 		if (mat.data == NULL)
 		{
@@ -149,6 +155,7 @@ void RaspiVoice::initFileImage()
 }
 
 
+#ifndef NO_RASPICAM
 void RaspiVoice::initRaspiCam()
 {
 	if (verbose)
@@ -156,14 +163,14 @@ void RaspiVoice::initRaspiCam()
 		std::cout << "Opening RaspiCam..." << std::endl;
 	}
 
-	raspiCam.set(CV_CAP_PROP_FORMAT, CV_8UC1);
-	raspiCam.set(CV_CAP_PROP_FRAME_WIDTH, 320); //Somehow, other resolutions did not work
-	raspiCam.set(CV_CAP_PROP_FRAME_HEIGHT, 240);
+	raspiCam.set(cv::CAP_PROP_FORMAT, CV_8UC1);
+	raspiCam.set(cv::CAP_PROP_FRAME_WIDTH, 320); //Somehow, other resolutions did not work
+	raspiCam.set(cv::CAP_PROP_FRAME_HEIGHT, 240);
 	if ((opt.exposure >= 1) && (opt.exposure <= 100))
 	{
-		raspiCam.set(CV_CAP_PROP_EXPOSURE, opt.exposure);
+		raspiCam.set(cv::CAP_PROP_EXPOSURE, opt.exposure);
 	}
-	
+
 	if (!raspiCam.open())
 	{
 		throw(std::runtime_error("Error opening RaspiCam."));
@@ -176,6 +183,7 @@ void RaspiVoice::initRaspiCam()
 		}
 	}
 }
+#endif
 
 void RaspiVoice::initUsbCam()
 {
@@ -187,23 +195,21 @@ void RaspiVoice::initUsbCam()
 	}
 
 	// Force V4L2 backend + MJPG FOURCC — required by the IR camera (matches ir-cam.py).
-	cap.open(cam_id, CV_CAP_V4L2);
+	cap.open(cam_id, cv::CAP_V4L2);
 
 	if (!cap.isOpened())
 	{
 		throw(std::runtime_error("Could not open camera."));
 	}
-	cap.set(CV_CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'));
+	cap.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'));
 	// Setting standard capture size, may fail; resize later
 	cv::Mat rawImage;
 	cap.read(rawImage);  // Dummy read needed with some devices
-	//cap.set(CV_CAP_PROP_FRAME_WIDTH, 176);
-	//cap.set(CV_CAP_PROP_FRAME_HEIGHT, 144);
-	cap.set(CV_CAP_PROP_FRAME_WIDTH, 320); //Increased resolution necessary for foveal mapping
-	cap.set(CV_CAP_PROP_FRAME_HEIGHT, 240);
+	cap.set(cv::CAP_PROP_FRAME_WIDTH, 320); //Increased resolution necessary for foveal mapping
+	cap.set(cv::CAP_PROP_FRAME_HEIGHT, 240);
 	if ((opt.exposure >= 1) && (opt.exposure <= 100))
 	{
-		cap.set(CV_CAP_PROP_EXPOSURE, opt.exposure);
+		cap.set(cv::CAP_PROP_EXPOSURE, opt.exposure);
 	}
 
 	if (verbose)
@@ -226,6 +232,7 @@ cv::Mat RaspiVoice::readImage()
 		rawImage = cv::imread(opt.input_filename.c_str(), CV_LOAD_IMAGE_GRAYSCALE);
 		processedImage = rawImage;
 	}
+#ifndef NO_RASPICAM
 	else if (image_source == 1) //RaspiCAM
 	{
 		raspiCam.grab();
@@ -238,9 +245,9 @@ cv::Mat RaspiVoice::readImage()
 				raspiCam.retrieve(rawImage);
 			}
 		}
-		//cv::imwrite("/var/tmp/raspicam_frame.jpg", processedImage);
 		processedImage = rawImage;
 	}
+#endif
 	else if (image_source >= 2) //OpenCv camera
 	{
 		cap.read(rawImage);
@@ -257,7 +264,7 @@ cv::Mat RaspiVoice::readImage()
 			throw(std::runtime_error("Error reading frame from camera."));
 		}
 
-		cv::cvtColor(rawImage, processedImage, CV_BGR2GRAY);
+		cv::cvtColor(rawImage, processedImage, cv::COLOR_BGR2GRAY);
 	}
 
 	return processedImage;

@@ -1,9 +1,10 @@
 #pragma once
 
 #include <vector>
+#ifndef NO_RASPICAM
 #include <raspicam/raspicam_cv.h>
-#include <opencv/cv.h>
-#include <opencv/highgui.h>
+#endif
+#include <opencv2/opencv.hpp>
 
 #include "Options.h"
 #include "ImageToSoundscape.h"
@@ -20,7 +21,9 @@ private:
 	RaspiVoiceOptions opt;
 
 	ImageToSoundscapeConverter *i2ssConverter;
+#ifndef NO_RASPICAM
 	raspicam::RaspiCam_Cv raspiCam;
+#endif
 	cv::VideoCapture cap;
 	std::vector<float> *image;
 
@@ -30,7 +33,9 @@ private:
 	void init();
 	void initFileImage();
 	void initTestImage();
+#ifndef NO_RASPICAM
 	void initRaspiCam();
+#endif
 	void initUsbCam();
 	cv::Mat readImage();
 	void processImage(cv::Mat rawImage);

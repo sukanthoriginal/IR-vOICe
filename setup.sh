@@ -17,21 +17,9 @@ sudo apt-get install -y \
     alsa-utils \
     wget unzip ca-certificates
 
-if ! ldconfig -p | grep -q libraspicam; then
-    echo "==> building raspicam"
-    tmp=$(mktemp -d)
-    git clone --depth 1 https://github.com/cedricve/raspicam.git "$tmp/raspicam"
-    mkdir -p "$tmp/raspicam/build"
-    cd "$tmp/raspicam/build"
-    cmake ..
-    make -j"$(nproc)"
-    sudo make install
-    sudo ldconfig
-    cd "$ROOT"
-    rm -rf "$tmp"
-else
-    echo "==> raspicam already installed, skipping"
-fi
+# raspicam intentionally NOT installed — the build is compiled with NO_RASPICAM
+# (we use the USB IR camera via -s2, not the CSI camera). raspicam needs the
+# legacy Broadcom MMAL stack which is gone on Bookworm.
 
 if ! command -v gpio >/dev/null 2>&1; then
     echo "==> installing wiringPi"
