@@ -391,10 +391,13 @@ void RaspiVoice::processImage(cv::Mat rawImage)
 
 		if (preview)
 		{
-			//Screen views
-			//imwrite("raspivoice_capture_raw.jpg", rawImage);
-			//imwrite("raspivoice_capture_scaled_gray.jpg", processedImage);
-			cv::imshow("RaspiVoice Preview", processedImage);
+			// Upscale to ~640px wide with INTER_NEAREST so the algorithm's
+			// actual input pixels stay visible (just bigger). Keeps aspect.
+			cv::Mat previewImage;
+			int target_w = 640;
+			int target_h = (target_w * processedImage.rows) / processedImage.cols;
+			cv::resize(processedImage, previewImage, cv::Size(target_w, target_h), 0, 0, cv::INTER_NEAREST);
+			cv::imshow("RaspiVoice Preview", previewImage);
 
 			cv::waitKey(200);
 		}
