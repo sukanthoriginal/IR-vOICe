@@ -4,7 +4,14 @@
 #ifndef NO_RASPICAM
 #include <raspicam/raspicam_cv.h>
 #endif
-#include <opencv2/opencv.hpp>
+// Targeted OpenCV headers only — pulling <opencv2/opencv.hpp> drags in
+// stitching.hpp which collides with ncurses' #define OK 0.
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/videoio.hpp>
+#include <opencv2/calib3d.hpp>
 
 #include "Options.h"
 #include "ImageToSoundscape.h"

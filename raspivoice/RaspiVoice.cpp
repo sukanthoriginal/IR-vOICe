@@ -229,7 +229,7 @@ cv::Mat RaspiVoice::readImage()
 	}
 	if ((image_source == 0) && (opt.input_filename != ""))
 	{
-		rawImage = cv::imread(opt.input_filename.c_str(), CV_LOAD_IMAGE_GRAYSCALE);
+		rawImage = cv::imread(opt.input_filename.c_str(), cv::IMREAD_GRAYSCALE);
 		processedImage = rawImage;
 	}
 #ifndef NO_RASPICAM
