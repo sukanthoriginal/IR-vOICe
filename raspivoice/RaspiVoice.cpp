@@ -238,7 +238,13 @@ void RaspiVoice::initUsbCam()
 	cap.set(cv::CAP_PROP_FRAME_HEIGHT, 240);
 	if ((opt.exposure >= 1) && (opt.exposure <= 100))
 	{
-		cap.set(cv::CAP_PROP_EXPOSURE, opt.exposure);
+		// v4l2-ctl is more reliable than CAP_PROP_AUTO_EXPOSURE for disabling
+		// auto-exposure on USB cameras — OpenCV's setter is often silently ignored.
+		char v4l2cmd[128];
+		snprintf(v4l2cmd, sizeof(v4l2cmd),
+			"v4l2-ctl -d /dev/video%d --set-ctrl=auto_exposure=1 --set-ctrl=exposure_time_absolute=%d 2>/dev/null",
+			cam_id, opt.exposure * 10);
+		system(v4l2cmd);
 	}
 
 	// Start background thread that keeps latestRawFrame_ fresh at camera FPS.
