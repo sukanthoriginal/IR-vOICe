@@ -401,7 +401,10 @@ void RaspiVoice::processImage(cv::Mat rawImage)
 
 			// Left panel: raw camera frame (grayscale for fair comparison)
 			cv::Mat rawGray, rawPanel, processedPanel;
-			cv::cvtColor(rawImage, rawGray, cv::COLOR_BGR2GRAY);
+			if (rawImage.channels() == 1)
+				rawGray = rawImage;
+			else
+				cv::cvtColor(rawImage, rawGray, cv::COLOR_BGR2GRAY);
 			cv::resize(rawGray, rawPanel, cv::Size(target_w, target_h), 0, 0, cv::INTER_LINEAR);
 
 			// Right panel: vOICe algorithm input (nearest-neighbor keeps pixels honest)
