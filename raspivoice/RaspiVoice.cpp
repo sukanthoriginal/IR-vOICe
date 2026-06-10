@@ -283,9 +283,15 @@ cv::Mat RaspiVoice::readImage()
 #endif
 	else if (image_source >= 2) //OpenCv camera — use background thread's latest frame
 	{
-		pthread_mutex_lock(&rawFrameMutex_);
-		rawImage = latestRawFrame_.clone();
-		pthread_mutex_unlock(&rawFrameMutex_);
+		// Wait up to 2s for the capture thread to deliver the first frame.
+		for (int tries = 0; tries < 200; tries++)
+		{
+			pthread_mutex_lock(&rawFrameMutex_);
+			rawImage = latestRawFrame_.clone();
+			pthread_mutex_unlock(&rawFrameMutex_);
+			if (!rawImage.empty()) break;
+			usleep(10000); // 10ms
+		}
 
 		if (rawImage.empty())
 		{
