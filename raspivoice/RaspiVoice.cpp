@@ -90,7 +90,7 @@ void RaspiVoice::init()
 		cv::namedWindow("RaspiVoice Preview", cv::WINDOW_NORMAL);
 		// Open big by default. Drag the window corner to resize further.
 		// Override with `PREVIEW_WIDTH=1920 ./run.sh -p`.
-		cv::resizeWindow("RaspiVoice Preview", 1280, 960);
+		cv::resizeWindow("RaspiVoice Preview", 1920, 1440);
 	}
 
 	//Test read + process one image:
@@ -400,7 +400,7 @@ void RaspiVoice::processImage(cv::Mat rawImage)
 			// with the PREVIEW_WIDTH env var.
 			cv::Mat previewImage;
 			const char* env_w = std::getenv("PREVIEW_WIDTH");
-			int target_w = (env_w && std::atoi(env_w) > 0) ? std::atoi(env_w) : 1280;
+			int target_w = (env_w && std::atoi(env_w) > 0) ? std::atoi(env_w) : 1920;
 			int target_h = (target_w * processedImage.rows) / processedImage.cols;
 			cv::resize(processedImage, previewImage, cv::Size(target_w, target_h), 0, 0, cv::INTER_NEAREST);
 			cv::imshow("RaspiVoice Preview", previewImage);
