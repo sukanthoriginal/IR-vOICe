@@ -11,6 +11,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <chrono>
+#include <unistd.h>
 #include "RaspiVoice.h"
 #include "ImageToSoundscape.h"
 #include "test_image.h"
