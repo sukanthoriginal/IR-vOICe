@@ -88,9 +88,9 @@ void RaspiVoice::init()
 	if (preview)
 	{
 		cv::namedWindow("RaspiVoice Preview", cv::WINDOW_NORMAL);
-		// Open big by default. Drag the window corner to resize further.
-		// Override with `PREVIEW_WIDTH=1920 ./run.sh -p`.
-		cv::resizeWindow("RaspiVoice Preview", 1920, 1440);
+		// Side-by-side: raw | vOICe. Double wide.
+		// Override width with `PREVIEW_WIDTH=1920 ./run.sh -p`.
+		cv::resizeWindow("RaspiVoice Preview", 1920 * 2, 1080);
 	}
 
 	//Test read + process one image:
@@ -395,16 +395,25 @@ void RaspiVoice::processImage(cv::Mat rawImage)
 
 		if (preview)
 		{
-			// Upscale with INTER_NEAREST so the algorithm's actual input
-			// pixels stay visible (just bigger). Override default width
-			// with the PREVIEW_WIDTH env var.
-			cv::Mat previewImage;
 			const char* env_w = std::getenv("PREVIEW_WIDTH");
 			int target_w = (env_w && std::atoi(env_w) > 0) ? std::atoi(env_w) : 1920;
 			int target_h = (target_w * processedImage.rows) / processedImage.cols;
-			cv::resize(processedImage, previewImage, cv::Size(target_w, target_h), 0, 0, cv::INTER_NEAREST);
-			cv::imshow("RaspiVoice Preview", previewImage);
 
+			// Left panel: raw camera frame (grayscale for fair comparison)
+			cv::Mat rawGray, rawPanel, processedPanel;
+			cv::cvtColor(rawImage, rawGray, cv::COLOR_BGR2GRAY);
+			cv::resize(rawGray, rawPanel, cv::Size(target_w, target_h), 0, 0, cv::INTER_LINEAR);
+
+			// Right panel: vOICe algorithm input (nearest-neighbor keeps pixels honest)
+			cv::resize(processedImage, processedPanel, cv::Size(target_w, target_h), 0, 0, cv::INTER_NEAREST);
+
+			// Stack side by side and label
+			cv::Mat combined;
+			cv::hconcat(rawPanel, processedPanel, combined);
+			cv::putText(combined, "Raw IR", cv::Point(20, 40), cv::FONT_HERSHEY_SIMPLEX, 1.2, cv::Scalar(255), 2);
+			cv::putText(combined, "vOICe input", cv::Point(target_w + 20, 40), cv::FONT_HERSHEY_SIMPLEX, 1.2, cv::Scalar(255), 2);
+
+			cv::imshow("RaspiVoice Preview", combined);
 			cv::waitKey(200);
 		}
 
