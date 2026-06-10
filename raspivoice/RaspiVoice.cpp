@@ -9,6 +9,7 @@
 // License: https://creativecommons.org/licenses/by/4.0/
 
 #include <iostream>
+#include <cstdlib>
 #include "RaspiVoice.h"
 #include "ImageToSoundscape.h"
 #include "test_image.h"
@@ -87,6 +88,9 @@ void RaspiVoice::init()
 	if (preview)
 	{
 		cv::namedWindow("RaspiVoice Preview", cv::WINDOW_NORMAL);
+		// Open big by default. Drag the window corner to resize further.
+		// Override with `PREVIEW_WIDTH=1920 ./run.sh -p`.
+		cv::resizeWindow("RaspiVoice Preview", 1280, 960);
 	}
 
 	//Test read + process one image:
@@ -391,10 +395,12 @@ void RaspiVoice::processImage(cv::Mat rawImage)
 
 		if (preview)
 		{
-			// Upscale to ~640px wide with INTER_NEAREST so the algorithm's
-			// actual input pixels stay visible (just bigger). Keeps aspect.
+			// Upscale with INTER_NEAREST so the algorithm's actual input
+			// pixels stay visible (just bigger). Override default width
+			// with the PREVIEW_WIDTH env var.
 			cv::Mat previewImage;
-			int target_w = 640;
+			const char* env_w = std::getenv("PREVIEW_WIDTH");
+			int target_w = (env_w && std::atoi(env_w) > 0) ? std::atoi(env_w) : 1280;
 			int target_h = (target_w * processedImage.rows) / processedImage.cols;
 			cv::resize(processedImage, previewImage, cv::Size(target_w, target_h), 0, 0, cv::INTER_NEAREST);
 			cv::imshow("RaspiVoice Preview", previewImage);
