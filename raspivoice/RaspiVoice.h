@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <pthread.h>
 #ifndef NO_RASPICAM
 #include <raspicam/raspicam_cv.h>
 #endif
@@ -34,6 +35,16 @@ private:
 	cv::VideoCapture cap;
 	std::vector<float> *image;
 
+	// Background capture thread — keeps latestRawFrame_ fresh at camera FPS.
+	pthread_t captureThread_;
+	pthread_mutex_t rawFrameMutex_;
+	cv::Mat latestRawFrame_;
+	volatile bool captureRunning_;
+	static void* captureLoop(void* self);
+
+	// Last combined preview frame, shown in the display loop during audio.
+	cv::Mat lastPreviewFrame_;
+
 	RaspiVoice(const RaspiVoice& other) = delete;
 	RaspiVoice& operator=(const RaspiVoice&) = delete;
 
@@ -53,4 +64,3 @@ public:
 	void GrabAndProcessFrame(RaspiVoiceOptions opt);
 	void PlayFrame(RaspiVoiceOptions opt);
 };
-

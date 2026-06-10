@@ -10,6 +10,7 @@
 
 #include <iostream>
 #include <cstdlib>
+#include <chrono>
 #include "RaspiVoice.h"
 #include "ImageToSoundscape.h"
 #include "test_image.h"
@@ -47,6 +48,29 @@ RaspiVoice::~RaspiVoice()
 		raspiCam.release();
 	}
 #endif
+	if (image_source >= 2)
+	{
+		captureRunning_ = false;
+		pthread_join(captureThread_, nullptr);
+		pthread_mutex_destroy(&rawFrameMutex_);
+	}
+}
+
+void* RaspiVoice::captureLoop(void* self)
+{
+	RaspiVoice* rv = static_cast<RaspiVoice*>(self);
+	while (rv->captureRunning_)
+	{
+		cv::Mat frame;
+		rv->cap.read(frame);
+		if (!frame.empty())
+		{
+			pthread_mutex_lock(&rv->rawFrameMutex_);
+			rv->latestRawFrame_ = frame.clone();
+			pthread_mutex_unlock(&rv->rawFrameMutex_);
+		}
+	}
+	return nullptr;
 }
 
 
@@ -216,6 +240,11 @@ void RaspiVoice::initUsbCam()
 		cap.set(cv::CAP_PROP_EXPOSURE, opt.exposure);
 	}
 
+	// Start background thread that keeps latestRawFrame_ fresh at camera FPS.
+	pthread_mutex_init(&rawFrameMutex_, nullptr);
+	captureRunning_ = true;
+	pthread_create(&captureThread_, nullptr, captureLoop, this);
+
 	if (verbose)
 	{
 		std::cout << "Ok" << std::endl;
@@ -252,23 +281,21 @@ cv::Mat RaspiVoice::readImage()
 		processedImage = rawImage;
 	}
 #endif
-	else if (image_source >= 2) //OpenCv camera
+	else if (image_source >= 2) //OpenCv camera — use background thread's latest frame
 	{
-		cap.read(rawImage);
-		if (opt.read_frames > 1)
-		{
-			for (int r = 1; r < opt.read_frames; r++)
-			{
-				cap.read(rawImage);
-			}
-		}
+		pthread_mutex_lock(&rawFrameMutex_);
+		rawImage = latestRawFrame_.clone();
+		pthread_mutex_unlock(&rawFrameMutex_);
 
 		if (rawImage.empty())
 		{
 			throw(std::runtime_error("Error reading frame from camera."));
 		}
 
-		cv::cvtColor(rawImage, processedImage, cv::COLOR_BGR2GRAY);
+		if (rawImage.channels() == 1)
+			processedImage = rawImage;
+		else
+			cv::cvtColor(rawImage, processedImage, cv::COLOR_BGR2GRAY);
 	}
 
 	return processedImage;
@@ -416,8 +443,9 @@ void RaspiVoice::processImage(cv::Mat rawImage)
 			cv::putText(combined, "Raw IR", cv::Point(20, 40), cv::FONT_HERSHEY_SIMPLEX, 1.2, cv::Scalar(255), 2);
 			cv::putText(combined, "vOICe input", cv::Point(target_w + 20, 40), cv::FONT_HERSHEY_SIMPLEX, 1.2, cv::Scalar(255), 2);
 
+			lastPreviewFrame_ = combined;
 			cv::imshow("RaspiVoice Preview", combined);
-			cv::waitKey(200);
+			cv::waitKey(1);
 		}
 
 		/* Set live camera image */
@@ -475,6 +503,46 @@ void RaspiVoice::PlayFrame(RaspiVoiceOptions opt)
 		}
 
 		audioData.Play();
+
+		// While audio plays in the background, keep refreshing the preview
+		// so the raw IR panel updates at camera FPS instead of ~1fps.
+		if (preview && !lastPreviewFrame_.empty())
+		{
+			int duration_ms = audioData.getDurationMs();
+			auto t0 = std::chrono::steady_clock::now();
+			while (true)
+			{
+				// Build fresh raw panel from background thread
+				pthread_mutex_lock(&rawFrameMutex_);
+				cv::Mat raw = latestRawFrame_.clone();
+				pthread_mutex_unlock(&rawFrameMutex_);
+
+				if (!raw.empty())
+				{
+					const char* env_w = std::getenv("PREVIEW_WIDTH");
+					int target_w = (env_w && std::atoi(env_w) > 0) ? std::atoi(env_w) : 1920;
+					int target_h = (target_w * lastPreviewFrame_.rows) / (lastPreviewFrame_.cols / 2);
+					cv::Mat rawGray, rawPanel;
+					if (raw.channels() == 1) rawGray = raw;
+					else cv::cvtColor(raw, rawGray, cv::COLOR_BGR2GRAY);
+					cv::resize(rawGray, rawPanel, cv::Size(target_w, target_h), 0, 0, cv::INTER_LINEAR);
+
+					// Replace left half of lastPreviewFrame_ with fresh raw
+					cv::Mat right = lastPreviewFrame_(cv::Rect(lastPreviewFrame_.cols / 2, 0,
+					                                           lastPreviewFrame_.cols / 2, lastPreviewFrame_.rows));
+					cv::Mat combined;
+					cv::hconcat(rawPanel, right, combined);
+					cv::putText(combined, "Raw IR", cv::Point(20, 40), cv::FONT_HERSHEY_SIMPLEX, 1.2, cv::Scalar(255), 2);
+					cv::putText(combined, "vOICe input", cv::Point(target_w + 20, 40), cv::FONT_HERSHEY_SIMPLEX, 1.2, cv::Scalar(255), 2);
+					cv::imshow("RaspiVoice Preview", combined);
+				}
+
+				cv::waitKey(1);
+				auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+				    std::chrono::steady_clock::now() - t0).count();
+				if (elapsed >= duration_ms) break;
+			}
+		}
 
 		if (opt.output_filename != "")
 		{

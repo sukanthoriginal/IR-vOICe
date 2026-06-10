@@ -79,24 +79,21 @@ void AudioData::SaveToWavFile(std::string filename)
 void AudioData::Play()
 {
 	updateVolume();
-	
-	int bytes_per_sample = (use_stereo ? 4 : 2);
+
+	// Write to temp WAV then launch aplay in the background — returns
+	// immediately so the caller can keep updating the preview display.
+	static const std::string tmpfile = "/tmp/rv_audio.wav";
+	SaveToWavFile(tmpfile);
 
 	std::stringstream cmd;
-	cmd << "aplay --nonblock -r" << sample_freq_Hz << " -c" << (use_stereo ? 2 : 1) << " -fS16_LE -D plughw:" << CardNumber;
-	if (!Verbose)
-	{
-		cmd << " -q";
-	}
-	else
+	cmd << "aplay -q " << tmpfile << " -D plughw:" << CardNumber << " &";
+	if (Verbose)
 	{
 		std::cout << cmd.str() << std::endl;
 	}
 
 	pthread_mutex_lock(&audio_mutex);
-	FILE* p = popen(cmd.str().c_str(), "w");
-	fwrite(samplebuffer.data(), bytes_per_sample, sample_count, p);
-	pclose(p);
+	system(cmd.str().c_str());
 	pthread_mutex_unlock(&audio_mutex);
 }
 

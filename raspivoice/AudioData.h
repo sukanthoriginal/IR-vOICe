@@ -31,6 +31,7 @@ public:
 	void SaveToWavFile(std::string filename);
 	
 	void Play();
+	int getDurationMs() const { return (sample_count * 1000) / sample_freq_Hz; }
 	int PlayWav(std::string filename);
 	void SetVolume(int newvolume);
 	bool Speak(std::string text);
