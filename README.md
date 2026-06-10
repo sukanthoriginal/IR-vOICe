@@ -24,9 +24,9 @@ If the SD card dies, follow these steps in order:
 ### 1. Flash the OS
 Use **Raspberry Pi Imager** → Raspberry Pi OS (64-bit) Bookworm.
 In the imager's advanced settings (⚙️):
-- Set hostname: `sukanth-raspberry-pi`
+- Set hostname: `ir-voice-pi` (or anything you like)
 - Enable SSH (password auth)
-- Set username: `sukanth` + your password
+- Set username + password
 - Set WiFi SSID + password
 
 ### 2. First boot — install Tailscale
@@ -44,18 +44,25 @@ cd IR-vOICe
 ./setup.sh      # installs all deps, enables SSH, builds raspivoice
 ```
 
-### 4. Remote access from Mac
-Ensure Tailscale is running on the Mac, then:
-```bash
-ssh -Y sukanth@sukanth-raspberry-pi "cd ~/Desktop/IR-vOICe && ./run.sh -p"
-```
+### 4. Mac setup (one-time)
+- Install **Tailscale**: https://tailscale.com/download — sign in with the same account used on the Pi
+- Install **XQuartz**: https://www.xquartz.org (needed for the `-p` preview window over SSH)
+- After installing XQuartz: **log out of macOS and log back in**, then open XQuartz once
 
-### Audio card reference (this Pi)
+### 5. Remote access from Mac
+```bash
+ssh -Y <user>@<tailscale-ip> "cd ~/Desktop/IR-vOICe && ./run.sh -p"
 ```
--a1  →  HDMI monitor
--a2  →  3.5mm earphones  (default in run.sh)
+The preview window appears on the Mac. Audio plays on the Pi's earphones.
+Find the Pi's Tailscale IP in the Tailscale app under Devices.
+
+### Audio card reference
+Run `aplay -l` on the Pi to find your card numbers. Pass with `-aN`:
 ```
-Run `aplay -l` on a new Pi to confirm card numbers — they may differ.
+./run.sh -a1    # e.g. HDMI
+./run.sh -a2    # e.g. 3.5mm earphones
+```
+Card numbers can differ between Pi units — always verify with `aplay -l`.
 
 ---
 
@@ -124,6 +131,7 @@ not the camera.
 | `-E` / `--edge_detection_threshold=N` | Edge detection strength                              |
 | `--foveal_mapping`                    | More resolution in the center of the image           |
 | `-n` / `--negative_image`             | Invert image (useful for IR where hot = bright)      |
+| `--read_frames=N`                     | Frames drained from V4L2 buffer before processing. Default is 5 — **do not lower this.** The camera buffers frames while audio plays; without draining them you get 3-4s stale-frame lag. |
 
 For IR specifically, `-n` is often what you want — thermal pictures show
 heat as bright pixels, but vOICe maps brightness to loudness. Inverting
