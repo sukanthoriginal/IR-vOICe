@@ -17,4 +17,4 @@ fi
 # Default audio card = 2 (USB / 3.5mm earphones on Sukanth's Pi 4 setup).
 # Override by passing your own -a flag, e.g. `./run.sh -a1` for HDMI/monitor.
 # getopt is last-wins, so a user-supplied -a overrides the default below.
-exec ./Release/raspivoice -s2 -v -a2 "$@"
+exec ./Release/raspivoice -s2 -v -a2 --read_frames=5 "$@"
