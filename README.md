@@ -2,7 +2,7 @@
 
 Sensory substitution: an **infrared camera** feeds a live image into the
 [vOICe](https://www.seeingwithsound.com/) algorithm, which turns it into a
-soundscape played through headphones. The aim is to let a blind user *hear*
+soundscape played through headphones. The aim is to let a blind user _hear_
 thermal/IR scenes.
 
 Built on top of [seeingwithsound/raspivoice](https://github.com/seeingwithsound/raspivoice)
@@ -16,6 +16,48 @@ camera instead of the Pi CSI camera.
 - USB IR camera that shows up as `/dev/video0` (Arducam IR USB module
   works — see `ir-cam.py` for a 19-line capture sanity check)
 - Audio out: USB headphones, 3.5mm headphone jack, or HDMI
+
+## Replicating from scratch (new Pi)
+
+If the SD card dies, follow these steps in order:
+
+### 1. Flash the OS
+Use **Raspberry Pi Imager** → Raspberry Pi OS (64-bit) Bookworm.
+In the imager's advanced settings (⚙️):
+- Set hostname: `sukanth-raspberry-pi`
+- Enable SSH (password auth)
+- Set username: `sukanth` + your password
+- Set WiFi SSID + password
+
+### 2. First boot — install Tailscale
+```bash
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up
+# Follow the auth link, sign in with ontelligency@gmail.com
+```
+
+### 3. Clone and build
+```bash
+cd ~/Desktop
+git clone https://github.com/sukanthoriginal/IR-vOICe.git
+cd IR-vOICe
+./setup.sh      # installs all deps, enables SSH, builds raspivoice
+```
+
+### 4. Remote access from Mac
+Ensure Tailscale is running on the Mac, then:
+```bash
+ssh -Y sukanth@sukanth-raspberry-pi "cd ~/Desktop/IR-vOICe && ./run.sh -p"
+```
+
+### Audio card reference (this Pi)
+```
+-a1  →  HDMI monitor
+-a2  →  3.5mm earphones  (default in run.sh)
+```
+Run `aplay -l` on a new Pi to confirm card numbers — they may differ.
+
+---
 
 ## Quick start
 
@@ -73,15 +115,15 @@ not the camera.
 
 `raspivoice --help` lists every knob. The most useful ones:
 
-| Flag                    | What it does                              |
-|-------------------------|-------------------------------------------|
-| `--freq_lowest=N`       | Bottom of the frequency sweep (default 500 Hz) |
-| `--freq_highest=N`      | Top of the frequency sweep (default 5000 Hz)   |
-| `--total_time_s=N`      | Duration of one left-to-right sweep (default 1.05 s) |
-| `--rows=N --columns=N`  | Image resolution fed to the algorithm     |
-| `-E` / `--edge_detection_threshold=N` | Edge detection strength       |
-| `--foveal_mapping`      | More resolution in the center of the image|
-| `-n` / `--negative_image` | Invert image (useful for IR where hot = bright) |
+| Flag                                  | What it does                                         |
+| ------------------------------------- | ---------------------------------------------------- |
+| `--freq_lowest=N`                     | Bottom of the frequency sweep (default 500 Hz)       |
+| `--freq_highest=N`                    | Top of the frequency sweep (default 5000 Hz)         |
+| `--total_time_s=N`                    | Duration of one left-to-right sweep (default 1.05 s) |
+| `--rows=N --columns=N`                | Image resolution fed to the algorithm                |
+| `-E` / `--edge_detection_threshold=N` | Edge detection strength                              |
+| `--foveal_mapping`                    | More resolution in the center of the image           |
+| `-n` / `--negative_image`             | Invert image (useful for IR where hot = bright)      |
 
 For IR specifically, `-n` is often what you want — thermal pictures show
 heat as bright pixels, but vOICe maps brightness to loudness. Inverting
@@ -98,7 +140,7 @@ makes cold/empty scenes quiet.
   `raspivoice/RaspiVoice.cpp` and rebuild.
 - **Build fails on `pkg-config opencv4`** — your Pi OS version doesn't
   register OpenCV as `opencv4`. Try `pkg-config --list-all | grep -i
-  opencv` and adjust `LINUX_PACKAGES` in `release_rpi2.mak`.
+opencv` and adjust `LINUX_PACKAGES` in `release_rpi2.mak`.
 
 ## License
 

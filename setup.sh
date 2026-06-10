@@ -6,6 +6,9 @@ set -euo pipefail
 cd "$(dirname "$0")"
 ROOT="$PWD"
 
+echo "==> enabling SSH"
+sudo systemctl enable --now ssh
+
 echo "==> apt packages"
 sudo apt-get update
 sudo apt-get install -y \
@@ -15,7 +18,8 @@ sudo apt-get install -y \
     libasound2-dev \
     libespeak-dev espeak \
     alsa-utils \
-    wget unzip ca-certificates
+    wget unzip ca-certificates \
+    xauth
 
 # raspicam intentionally NOT installed — the build is compiled with NO_RASPICAM
 # (we use the USB IR camera via -s2, not the CSI camera). raspicam needs the
