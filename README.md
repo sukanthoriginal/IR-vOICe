@@ -132,10 +132,49 @@ not the camera.
 | `--foveal_mapping`                    | More resolution in the center of the image           |
 | `-n` / `--negative_image`             | Invert image (useful for IR where hot = bright)      |
 | `--read_frames=N`                     | Frames drained from V4L2 buffer before processing. Default is 5 — **do not lower this.** The camera buffers frames while audio plays; without draining them you get 3-4s stale-frame lag. |
+| `-e N` / `--exposure=N`               | Camera exposure. See **Exposure** section below. |
 
 For IR specifically, `-n` is often what you want — thermal pictures show
 heat as bright pixels, but vOICe maps brightness to loudness. Inverting
 makes cold/empty scenes quiet.
+
+## Exposure
+
+The IR camera with a 780nm long-pass filter passes a large slice of the solar
+spectrum, so sunlight near-IR is far more intense than indoor ambient — roughly
+100× the energy. This means the usable exposure range is very narrow:
+
+| Condition | Flag |
+| --------- | ---- |
+| Outdoors, bright sun | `-e 1` |
+| Outdoors, overcast | `-e 2` to `-e 5` |
+| Indoors with IR illuminator | `-e 3` to `-e 15` |
+| Indoors, ambient only | `-e 15`+ |
+
+The `-e` value maps to `exposure_time_absolute × 10` in V4L2 units (100 µs each),
+so `-e 1` = 1 ms and `-e 15` = 150 ms. Going one step too high outdoors blows
+the entire image to white — the window is that tight.
+
+**Why native auto-exposure doesn't work well here:** V4L2's built-in AE has no
+range limits. Indoors it cranks exposure up to 157+ (the sensor default), which
+is fine indoors but instantly saturates the sensor outdoors. There is also no
+standard V4L2 interface to cap the AE range on USB cameras.
+
+**Software AE (default, `-e 0`):** When no `-e` flag is passed, the program runs
+its own auto-exposure loop constrained to the range 1–15:
+
+- After each frame, the mean pixel brightness is measured.
+- If the image is too bright (mean > 148), exposure steps down by 2.
+- If too dark (mean < 108), exposure steps up by 2.
+- A ±20 dead-band around 128 prevents constant micro-adjustments.
+- The v4l2-ctl tool is called directly (OpenCV's setter is silently ignored by
+  many USB camera drivers).
+
+This lets the camera transition between indoor and outdoor scenes without manual
+intervention, while never going outside the range known to work.
+
+The current exposure value and equivalent time are shown in the **info panel**
+on the right side of the preview window (`-p` flag).
 
 ## Troubleshooting
 
