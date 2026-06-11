@@ -497,8 +497,8 @@ void RaspiVoice::applySoftwareAE(const cv::Mat& grayFrame)
 	if (grayFrame.empty()) return;
 	double mean = cv::mean(grayFrame)[0];
 	int newExp = softwareAE_exposure_;
-	if (mean > 148 && newExp > 1)   newExp--;
-	else if (mean < 108 && newExp < 15) newExp++;
+	if (mean > 148)      newExp = std::max(1,  newExp - 2);
+	else if (mean < 108) newExp = std::min(15, newExp + 2);
 	if (newExp != softwareAE_exposure_)
 	{
 		softwareAE_exposure_ = newExp;
