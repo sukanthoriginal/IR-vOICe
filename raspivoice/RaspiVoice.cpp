@@ -115,7 +115,7 @@ void RaspiVoice::init()
 		cv::namedWindow("RaspiVoice Preview", cv::WINDOW_NORMAL);
 		// Side-by-side: raw | vOICe. Double wide.
 		// Override width with `PREVIEW_WIDTH=1920 ./run.sh -p`.
-		cv::resizeWindow("RaspiVoice Preview", 1920 * 2, 1080);
+		cv::resizeWindow("RaspiVoice Preview", 1920 * 2 + 260, 1080);
 	}
 
 	//Test read + process one image:
@@ -467,18 +467,21 @@ void RaspiVoice::processImage(cv::Mat rawImage)
 			cv::putText(combined, "Raw IR", cv::Point(20, 40), cv::FONT_HERSHEY_SIMPLEX, 1.2, cv::Scalar(255), 2);
 			cv::putText(combined, "vOICe input", cv::Point(target_w + 20, 40), cv::FONT_HERSHEY_SIMPLEX, 1.2, cv::Scalar(255), 2);
 
-			// Info bar below the image
-			int infoH = 36;
-			cv::Mat infoBar(infoH, combined.cols, CV_8UC1, cv::Scalar(30));
+			// Right-side info panel — fixed width, same height as combined.
+			int infoW = 260;
+			cv::Mat infoPanel(combined.rows, infoW, CV_8UC1, cv::Scalar(30));
 			int expVal = (opt.exposure >= 1) ? opt.exposure : softwareAE_exposure_;
-			char info[64];
-			snprintf(info, sizeof(info), "e=%d   %d ms", expVal, expVal * 10);
-			cv::putText(infoBar, info, cv::Point(20, 24), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(220), 1);
-			cv::Mat withBar;
-			cv::vconcat(combined, infoBar, withBar);
+			char eLine[32], msLine[32];
+			snprintf(eLine,  sizeof(eLine),  "e = %d", expVal);
+			snprintf(msLine, sizeof(msLine), "%d ms",  expVal * 10);
+			int midY = combined.rows / 2;
+			cv::putText(infoPanel, eLine,  cv::Point(20, midY - 20), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(220), 2);
+			cv::putText(infoPanel, msLine, cv::Point(20, midY + 30), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(220), 2);
+			cv::Mat withInfo;
+			cv::hconcat(combined, infoPanel, withInfo);
 
-			lastPreviewFrame_ = withBar;
-			cv::imshow("RaspiVoice Preview", withBar);
+			lastPreviewFrame_ = withInfo;
+			cv::imshow("RaspiVoice Preview", withInfo);
 			cv::waitKey(1);
 		}
 
