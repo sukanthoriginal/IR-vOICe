@@ -151,8 +151,8 @@ spectrum, so sunlight near-IR is far more intense than indoor ambient — roughl
 | Indoors with IR illuminator | `-e 3` to `-e 15` |
 | Indoors, ambient only | `-e 15`+ |
 
-The `-e` value maps to `exposure_time_absolute × 10` in V4L2 units (100 µs each),
-so `-e 1` = 1 ms and `-e 15` = 150 ms. Going one step too high outdoors blows
+The `-e` value maps directly to milliseconds: `-e 1` = 1 ms, `-e 15` = 15 ms.
+Internally this sets `exposure_time_absolute = e × 10` (V4L2 units of 100 µs each). Going one step too high outdoors blows
 the entire image to white — the window is that tight.
 
 **Why native auto-exposure doesn't work well here:** V4L2's built-in AE has no

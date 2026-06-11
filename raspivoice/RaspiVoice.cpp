@@ -473,7 +473,7 @@ void RaspiVoice::processImage(cv::Mat rawImage)
 			int expVal = (opt.exposure >= 1) ? opt.exposure : softwareAE_exposure_;
 			char eLine[32], msLine[32];
 			snprintf(eLine,  sizeof(eLine),  "e = %d", expVal);
-			snprintf(msLine, sizeof(msLine), "%d ms",  expVal * 10);
+			snprintf(msLine, sizeof(msLine), "%d ms",  expVal);
 			int midY = combined.rows / 2;
 			cv::putText(infoPanel, eLine,  cv::Point(20, midY - 20), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(220), 2);
 			cv::putText(infoPanel, msLine, cv::Point(20, midY + 30), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(220), 2);
