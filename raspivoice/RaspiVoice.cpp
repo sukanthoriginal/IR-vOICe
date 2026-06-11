@@ -246,6 +246,17 @@ void RaspiVoice::initUsbCam()
 			cam_id, opt.exposure * 10);
 		system(v4l2cmd);
 	}
+	else
+	{
+		// Software AE: disable native auto, start at mid-range (exposure 8 = 80ms).
+		softwareAE_camId_ = cam_id;
+		softwareAE_exposure_ = 8;
+		char v4l2cmd[128];
+		snprintf(v4l2cmd, sizeof(v4l2cmd),
+			"v4l2-ctl -d /dev/video%d --set-ctrl=auto_exposure=1 --set-ctrl=exposure_time_absolute=%d 2>/dev/null",
+			cam_id, softwareAE_exposure_ * 10);
+		system(v4l2cmd);
+	}
 
 	// Start background thread that keeps latestRawFrame_ fresh at camera FPS.
 	pthread_mutex_init(&rawFrameMutex_, nullptr);
@@ -481,6 +492,24 @@ void RaspiVoice::processImage(cv::Mat rawImage)
 
 }
 
+void RaspiVoice::applySoftwareAE(const cv::Mat& grayFrame)
+{
+	if (grayFrame.empty()) return;
+	double mean = cv::mean(grayFrame)[0];
+	int newExp = softwareAE_exposure_;
+	if (mean > 148 && newExp > 1)   newExp--;
+	else if (mean < 108 && newExp < 15) newExp++;
+	if (newExp != softwareAE_exposure_)
+	{
+		softwareAE_exposure_ = newExp;
+		char cmd[128];
+		snprintf(cmd, sizeof(cmd),
+			"v4l2-ctl -d /dev/video%d --set-ctrl=exposure_time_absolute=%d 2>/dev/null",
+			softwareAE_camId_, softwareAE_exposure_ * 10);
+		system(cmd);
+	}
+}
+
 void RaspiVoice::GrabAndProcessFrame(RaspiVoiceOptions opt)
 {
 	//Set new options. Options that have been copied to RaspiVoice:: fields in constructor are unaffected.
@@ -489,6 +518,8 @@ void RaspiVoice::GrabAndProcessFrame(RaspiVoiceOptions opt)
 	//Read and process images:
 	cv::Mat im = readImage();
 	processImage(im);
+	if (opt.exposure == 0 && image_source >= 2)
+		applySoftwareAE(im);
 
 	if (verbose)
 	{

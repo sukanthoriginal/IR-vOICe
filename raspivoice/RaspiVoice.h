@@ -45,6 +45,11 @@ private:
 	// Last combined preview frame, shown in the display loop during audio.
 	cv::Mat lastPreviewFrame_;
 
+	// Software auto-exposure state (used when opt.exposure == 0).
+	int softwareAE_exposure_;
+	int softwareAE_camId_;
+	void applySoftwareAE(const cv::Mat& grayFrame);
+
 	RaspiVoice(const RaspiVoice& other) = delete;
 	RaspiVoice& operator=(const RaspiVoice&) = delete;
 
