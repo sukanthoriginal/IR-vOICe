@@ -577,17 +577,17 @@ void RaspiVoice::PlayFrame(RaspiVoiceOptions opt)
 
 				if (!raw.empty())
 				{
-					const char* env_w = std::getenv("PREVIEW_WIDTH");
-					int target_w = (env_w && std::atoi(env_w) > 0) ? std::atoi(env_w) : 1920;
-					int target_h = (target_w * lastPreviewFrame_.rows) / (lastPreviewFrame_.cols / 2);
+					static const int kInfoW = 260;
+					int target_w = (lastPreviewFrame_.cols - kInfoW) / 2;
+					int target_h = lastPreviewFrame_.rows;
 					cv::Mat rawGray, rawPanel;
 					if (raw.channels() == 1) rawGray = raw;
 					else cv::cvtColor(raw, rawGray, cv::COLOR_BGR2GRAY);
 					cv::resize(rawGray, rawPanel, cv::Size(target_w, target_h), 0, 0, cv::INTER_LINEAR);
 
-					// Replace left half of lastPreviewFrame_ with fresh raw
-					cv::Mat right = lastPreviewFrame_(cv::Rect(lastPreviewFrame_.cols / 2, 0,
-					                                           lastPreviewFrame_.cols / 2, lastPreviewFrame_.rows));
+					// Keep right vOICe panel + info panel, replace only the left raw panel
+					cv::Mat right = lastPreviewFrame_(cv::Rect(target_w, 0,
+					                                           target_w + kInfoW, lastPreviewFrame_.rows));
 					cv::Mat combined;
 					cv::hconcat(rawPanel, right, combined);
 					cv::putText(combined, "Raw IR", cv::Point(20, 40), cv::FONT_HERSHEY_SIMPLEX, 1.2, cv::Scalar(255), 2);
