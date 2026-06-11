@@ -467,8 +467,18 @@ void RaspiVoice::processImage(cv::Mat rawImage)
 			cv::putText(combined, "Raw IR", cv::Point(20, 40), cv::FONT_HERSHEY_SIMPLEX, 1.2, cv::Scalar(255), 2);
 			cv::putText(combined, "vOICe input", cv::Point(target_w + 20, 40), cv::FONT_HERSHEY_SIMPLEX, 1.2, cv::Scalar(255), 2);
 
-			lastPreviewFrame_ = combined;
-			cv::imshow("RaspiVoice Preview", combined);
+			// Info bar below the image
+			int infoH = 36;
+			cv::Mat infoBar(infoH, combined.cols, CV_8UC1, cv::Scalar(30));
+			int expVal = (opt.exposure >= 1) ? opt.exposure : softwareAE_exposure_;
+			char info[64];
+			snprintf(info, sizeof(info), "e=%d   %d ms", expVal, expVal * 10);
+			cv::putText(infoBar, info, cv::Point(20, 24), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(220), 1);
+			cv::Mat withBar;
+			cv::vconcat(combined, infoBar, withBar);
+
+			lastPreviewFrame_ = withBar;
+			cv::imshow("RaspiVoice Preview", withBar);
 			cv::waitKey(1);
 		}
 
@@ -508,6 +518,7 @@ void RaspiVoice::applySoftwareAE(const cv::Mat& grayFrame)
 			softwareAE_camId_, softwareAE_exposure_ * 10);
 		system(cmd);
 	}
+
 }
 
 void RaspiVoice::GrabAndProcessFrame(RaspiVoiceOptions opt)
