@@ -46,6 +46,7 @@ typedef struct
 	bool speak;
 	bool dark_capture;
 	bool no_click;
+	std::string record_dir;
 
 	bool quit;
 } RaspiVoiceOptions;

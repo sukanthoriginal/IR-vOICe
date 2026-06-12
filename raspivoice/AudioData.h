@@ -27,9 +27,12 @@ public:
 	AudioData(int card_number, int sample_freq_Hz = 48000, int sample_count = 0, bool use_stereo = true);
 	
 	uint16_t *Data() { return &samplebuffer[0]; };
+	int SampleCount() const { return sample_count; }
+	int SampleFreqHz() const { return sample_freq_Hz; }
+	bool IsStereo() const { return use_stereo; }
 
 	void SaveToWavFile(std::string filename);
-	
+
 	void Play();
 	int getDurationMs() const { return (sample_count * 1000) / sample_freq_Hz; }
 	int PlayWav(std::string filename);

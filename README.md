@@ -121,6 +121,10 @@ not the camera.
   consumer sees a clean 319-wide frame. Diagnosed via `--dark_capture`.
 - Suppress the upstream vOICe "scan-start click" by default (`--no_click`
   is now the default; pass `--no_click=0` to re-enable if needed).
+- Dataset recording is enabled by default — every run writes paired raw
+  IR + vOICe-input frames + WAV files to `$HOME/IR-vOICe-datasets/session_*`.
+  Override the directory with `--record DIR`, or disable per-run with
+  `--no_record`.
 
 ## Tuning the soundscape
 
@@ -139,6 +143,8 @@ not the camera.
 | `-e N` / `--exposure=N`               | Camera exposure. See **Exposure** section below. |
 | `--no_click` (default)                | Suppress the ~1 ms left-channel tick at the start of each scan. Upstream vOICe uses it as an auditory anchor; we disable it because it's distracting. |
 | `--dark_capture`                      | Debug: average 30 dark frames, dump per-column brightness stats, save to `/tmp/dark_frame.png`, and exit. Cover the lens first. |
+| `--record=DIR`                        | Override the dataset output directory. Recording is **on by default** to `$HOME/IR-vOICe-datasets`. Per soundscape frame: saves `raw_NNNNNN.png` (post-crop IR), `voice_NNNNNN.png` (algorithm input), and `audio_NNNNNN.wav` into `DIR/session_YYYYMMDD_HHMMSS/`. Also writes `metadata.csv` (frame, ISO timestamp, exposure, mean brightness). Writes happen on a background thread; if disk falls behind, oldest queued frames are dropped so audio never blocks. |
+| `--no_record`                         | Disable dataset recording for this run. |
 
 For IR specifically, `-n` is often what you want — thermal pictures show
 heat as bright pixels, but vOICe maps brightness to loudness. Inverting

@@ -24,7 +24,8 @@ RaspiVoice::RaspiVoice(RaspiVoiceOptions opt) :
 	preview(opt.preview),
 	use_bw_test_image(opt.use_bw_test_image),
 	verbose(opt.verbose),
-	opt(opt)
+	opt(opt),
+	recorder_(nullptr)
 {
 	if ((image_source == 0) && (opt.input_filename == "")) //Test image, fixed size
 	{
@@ -34,10 +35,26 @@ RaspiVoice::RaspiVoice(RaspiVoiceOptions opt) :
 	init();
 
 	i2ssConverter = new ImageToSoundscapeConverter(rows, columns, opt.freq_lowest, opt.freq_highest, opt.sample_freq_Hz, opt.total_time_s, opt.use_exponential, opt.use_stereo, opt.use_delay, opt.use_fade, opt.use_diffraction, opt.use_bspline, opt.speed_of_sound_m_s, opt.acoustical_size_of_head_m, opt.no_click);
+
+	if (!opt.record_dir.empty())
+	{
+		recorder_ = new DatasetRecorder(opt.record_dir);
+		if (!recorder_->IsReady())
+		{
+			delete recorder_;
+			recorder_ = nullptr;
+		}
+	}
 }
 
 RaspiVoice::~RaspiVoice()
 {
+	if (recorder_)
+	{
+		delete recorder_;
+		recorder_ = nullptr;
+	}
+
 	if (i2ssConverter)
 	{
 		delete(i2ssConverter);
@@ -342,6 +359,14 @@ void RaspiVoice::processImage(cv::Mat rawImage)
 		printtime("ProcessImage start");
 	}
 
+	if (recorder_)
+	{
+		if (rawImage.channels() == 1)
+			lastRawForRecord_ = rawImage.clone();
+		else
+			cv::cvtColor(rawImage, lastRawForRecord_, cv::COLOR_BGR2GRAY);
+	}
+
 	if ((image_source > 0) || (opt.input_filename != ""))
 	{
 		if (opt.foveal_mapping)
@@ -492,6 +517,11 @@ void RaspiVoice::processImage(cv::Mat rawImage)
 			cv::waitKey(1);
 		}
 
+		if (recorder_)
+		{
+			lastVoiceInputForRecord_ = processedImage.clone();
+		}
+
 		/* Set live camera image */
 		for (int j = 0; j < columns; j++)
 		{
@@ -547,6 +577,21 @@ void RaspiVoice::GrabAndProcessFrame(RaspiVoiceOptions opt)
 		printtime("vOICe algorithm process start");
 	}
 	i2ssConverter->Process(*image);
+
+	if (recorder_ && !lastRawForRecord_.empty() && !lastVoiceInputForRecord_.empty())
+	{
+		AudioData &ad = i2ssConverter->GetAudioData();
+		int expVal = (opt.exposure >= 1) ? opt.exposure : softwareAE_exposure_;
+		double meanBrightness = cv::mean(lastRawForRecord_)[0];
+		recorder_->Enqueue(lastRawForRecord_,
+		                   lastVoiceInputForRecord_,
+		                   ad.Data(),
+		                   ad.SampleCount(),
+		                   ad.SampleFreqHz(),
+		                   ad.IsStereo(),
+		                   expVal,
+		                   meanBrightness);
+	}
 }
 
 void RaspiVoice::PlayFrame(RaspiVoiceOptions opt)

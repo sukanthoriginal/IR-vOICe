@@ -16,6 +16,7 @@
 
 #include "Options.h"
 #include "ImageToSoundscape.h"
+#include "DatasetRecorder.h"
 
 class RaspiVoice
 {
@@ -49,6 +50,13 @@ private:
 	int softwareAE_exposure_;
 	int softwareAE_camId_;
 	void applySoftwareAE(const cv::Mat& grayFrame);
+
+	// Dataset recorder (only allocated when opt.record_dir is non-empty).
+	// Last raw IR + last vOICe-input image captured during processImage(),
+	// for the recorder to grab after Process() builds the audio buffer.
+	DatasetRecorder *recorder_;
+	cv::Mat lastRawForRecord_;
+	cv::Mat lastVoiceInputForRecord_;
 
 	RaspiVoice(const RaspiVoice& other) = delete;
 	RaspiVoice& operator=(const RaspiVoice&) = delete;
