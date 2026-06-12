@@ -321,11 +321,11 @@ cv::Mat RaspiVoice::readImage()
 		else
 			cv::cvtColor(rawImage, processedImage, cv::COLOR_BGR2GRAY);
 
-		// Drop the leftmost 1px column — a known hot column on this OV2311 sensor
-		// always reads bright regardless of light. Clone to ensure contiguous memory.
-		if (processedImage.cols > 1)
+		// Drop the leftmost 2px — known hot columns on this OV2311 sensor
+		// always read bright regardless of light. Clone for contiguous memory.
+		if (processedImage.cols > 2)
 		{
-			processedImage = processedImage(cv::Rect(1, 0, processedImage.cols - 1, processedImage.rows)).clone();
+			processedImage = processedImage(cv::Rect(2, 0, processedImage.cols - 2, processedImage.rows)).clone();
 		}
 	}
 
