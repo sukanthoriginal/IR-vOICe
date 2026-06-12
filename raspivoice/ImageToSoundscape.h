@@ -20,6 +20,7 @@ private:
 	bool use_fade;
 	bool use_diffraction;
 	bool use_bspline;
+	bool no_click;
 	float speed_of_sound_m_s;
 	float acoustical_size_of_head_m;
 
@@ -49,7 +50,7 @@ public:
 							   int sample_freq_Hz = 44100, double total_time_s = 1.05, bool use_exponential = true,
 							   bool use_stereo = true, bool use_delay = true, bool use_fade = true,
 							   bool use_diffraction = true, bool use_bspline = true, float speed_of_sound_m_s = 340,
-							   float acoustical_size_of_head_m = 0.20);
+							   float acoustical_size_of_head_m = 0.20, bool no_click = false);
 
 	void Process(const std::vector<float> &image);
 	AudioData& GetAudioData() { return audioData; }

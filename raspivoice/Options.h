@@ -45,6 +45,7 @@ typedef struct
 	bool use_rotary_encoder;
 	bool speak;
 	bool dark_capture;
+	bool no_click;
 
 	bool quit;
 } RaspiVoiceOptions;

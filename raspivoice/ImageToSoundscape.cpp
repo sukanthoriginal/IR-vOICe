@@ -21,7 +21,7 @@ ImageToSoundscapeConverter::ImageToSoundscapeConverter(int rows, int columns, do
 													   int sample_freq_Hz, double total_time_s, bool use_exponential,
 													   bool use_stereo, bool use_delay, bool use_fade,
 													   bool use_diffraction, bool use_bspline, float speed_of_sound_m_s,
-													   float acoustical_size_of_head_m) :
+													   float acoustical_size_of_head_m, bool no_click) :
 	rows(rows),
 	columns(columns), freq_lowest(freq_lowest),
 	freq_highest(freq_highest),
@@ -33,6 +33,7 @@ ImageToSoundscapeConverter::ImageToSoundscapeConverter(int rows, int columns, do
 	use_fade(use_fade),
 	use_diffraction(use_diffraction),
 	use_bspline(use_bspline),
+	no_click(no_click),
 	speed_of_sound_m_s(speed_of_sound_m_s),
 	acoustical_size_of_head_m(acoustical_size_of_head_m),
 
@@ -242,7 +243,7 @@ void ImageToSoundscapeConverter::processStereo(const std::vector<float> &image)
 			sr += a * waveformCacheRightChannel[(sample * rows) + i];
 		}
 
-		if (sample < sampleCount / (5 * columns))
+		if (!no_click && sample < sampleCount / (5 * columns))
 		{
 			sl = (2.0*rnd() - 1.0) / scale;   // Left "click"
 		}

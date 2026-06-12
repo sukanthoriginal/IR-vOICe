@@ -33,7 +33,7 @@ RaspiVoice::RaspiVoice(RaspiVoiceOptions opt) :
 	}
 	init();
 
-	i2ssConverter = new ImageToSoundscapeConverter(rows, columns, opt.freq_lowest, opt.freq_highest, opt.sample_freq_Hz, opt.total_time_s, opt.use_exponential, opt.use_stereo, opt.use_delay, opt.use_fade, opt.use_diffraction, opt.use_bspline, opt.speed_of_sound_m_s, opt.acoustical_size_of_head_m);
+	i2ssConverter = new ImageToSoundscapeConverter(rows, columns, opt.freq_lowest, opt.freq_highest, opt.sample_freq_Hz, opt.total_time_s, opt.use_exponential, opt.use_stereo, opt.use_delay, opt.use_fade, opt.use_diffraction, opt.use_bspline, opt.speed_of_sound_m_s, opt.acoustical_size_of_head_m, opt.no_click);
 }
 
 RaspiVoice::~RaspiVoice()
