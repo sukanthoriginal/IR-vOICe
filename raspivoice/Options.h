@@ -44,6 +44,7 @@ typedef struct
 	std::string grab_keyboard;
 	bool use_rotary_encoder;
 	bool speak;
+	bool dark_capture;
 
 	bool quit;
 } RaspiVoiceOptions;

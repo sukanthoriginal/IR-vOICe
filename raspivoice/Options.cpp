@@ -48,8 +48,9 @@ static struct option long_getopt_options[] =
 	{ "grab_keyboard", required_argument, 0, 'g' },
 	{ "use_rotary_encoder", no_argument, 0, 'A' },
 	{ "speak", no_argument, 0, 'S' },
+	{ "dark_capture", no_argument, 0, 'k' },
 	{ 0, 0, 0, 0 }
-}; 
+};
 
 RaspiVoiceOptions GetDefaultOptions()
 {
@@ -94,6 +95,7 @@ RaspiVoiceOptions GetDefaultOptions()
 	opt.grab_keyboard = "";
 	opt.use_rotary_encoder = false;
 	opt.speak = false;
+	opt.dark_capture = false;
 
 	opt.quit = false;
 
@@ -109,7 +111,7 @@ bool SetCommandLineOptions(int argc, char *argv[])
 	//Retrieve command line options:
 	int option_index = 0;
 	int cmdline_opt;
-	while ((cmdline_opt = getopt_long_only(argc, argv, "hdr:c:s:i:o:a:V:pI:vnf:R:e:B:C:b:z:mE:G:L:H:t:x:y:d:F:D:N:Z:T:O:g:AS", long_getopt_options, &option_index)) != -1)
+	while ((cmdline_opt = getopt_long_only(argc, argv, "hdr:c:s:i:o:a:V:pI:vnf:R:e:B:C:b:z:mE:G:L:H:t:x:y:d:F:D:N:Z:T:O:g:ASk", long_getopt_options, &option_index)) != -1)
 	{
 		switch (cmdline_opt)
 		{
@@ -226,6 +228,9 @@ bool SetCommandLineOptions(int argc, char *argv[])
 			case 'S':
 				opt.speak = true;
 				break;
+			case 'k':
+				opt.dark_capture = true;
+				break;
 			default:
 				std::cout << "Type raspivoice --help for available options." << std::endl;
 				return false;
@@ -293,5 +298,6 @@ void ShowHelp()
 	std::cout << "-D  --use_diffraction=[1]" << std::endl;
 	std::cout << "-N  --use_bspline=[1]" << std::endl;
 	std::cout << "-Z  --sample_freq_Hz=[48000]" << std::endl;
+	std::cout << "    --dark_capture\t\t\tDebug: capture an averaged dark frame, dump per-column stats to stdout, save PNG to /tmp/dark_frame.png, exit. Cover the lens before running." << std::endl;
 	std::cout << std::endl;
 }
