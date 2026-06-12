@@ -175,6 +175,64 @@ The dark capture also revealed:
 
 ---
 
+## 8. Dataset recording — paired raw IR + vOICe input + WAV per frame
+
+**Problem (motivation):** No way to capture training/analysis data while
+walking around with the rig. We wanted paired records — the exact raw IR
+frame, the exact resized image fed into the vOICe algorithm, and the
+exact audio generated — so the dataset can be replayed and inspected
+offline.
+
+**Design considerations:**
+- **Storage format:** Three separate files per frame (raw_NNNNNN.png,
+  voice_NNNNNN.png, audio_NNNNNN.wav) inside a per-session subdirectory.
+  Chose this over HDF5/MP4 bundles because PNGs and WAVs are inspectable
+  with any image/audio viewer — no decoder needed for triage.
+- **When to write:** Background thread with a bounded queue (max 8).
+  The audio path must never block — if disk falls behind, oldest queued
+  frames are dropped rather than stalling playback.
+- **Where:** `$HOME/IR-vOICe-datasets/session_YYYYMMDD_HHMMSS/` by
+  default. New session per run so reruns don't clobber.
+- **Default on:** User wanted every run to record. Added `--no_record`
+  flag for opt-out, `--record=DIR` to override path.
+
+**Plumbing:**
+- New `DatasetRecorder` class (`DatasetRecorder.h/.cpp`) — owns the
+  background pthread, queue, mkdir, metadata.csv, hand-rolled WAV writer.
+- `RaspiVoice` constructor instantiates the recorder when
+  `opt.record_dir` is non-empty.
+- `processImage()` stashes `lastRawForRecord_` (post hot-column crop,
+  pre-resize) and `lastVoiceInputForRecord_` (after resize + all
+  transforms) into member fields.
+- `GrabAndProcessFrame()` calls `recorder_->Enqueue()` right after
+  `i2ssConverter->Process()` while the audio buffer is fresh.
+- New `AudioData::SampleCount()`, `SampleFreqHz()`, `IsStereo()`
+  accessors expose what the recorder needs to copy the buffer + write
+  the WAV header.
+
+**Image captured for each frame:**
+| File | Source | Resolution |
+|------|--------|------------|
+| `raw_NNNNNN.png`   | `latestRawFrame_` post hot-column crop | 319×240 |
+| `voice_NNNNNN.png` | Final `processedImage` before algorithm | 176×64 (or whatever `-r`/`-c` are) |
+| `audio_NNNNNN.wav` | `AudioData` sample buffer, 16-bit PCM stereo @ 48 kHz | ~1.05 s |
+| `metadata.csv` row | frame, ISO timestamp, exposure, mean brightness | per frame |
+
+**Why the WAV writer is hand-rolled instead of `AudioData::SaveToWavFile`:**
+`AudioData::SaveToWavFile` writes the live `samplebuffer` directly. The
+recorder needs to write asynchronously, so we copy the buffer into the
+queue item and the background thread emits a fresh WAV from the copy.
+Header layout matches `AudioData`'s exactly (16-bit PCM, RIFF/fmt/data
+chunks).
+
+**Verification:** Pulled session dir from Pi via rsync, opened a few
+frames in Preview and audio in QuickTime — raw IR, vOICe input, and WAV
+all line up.
+
+**Commits:** `2b171a7` (add dataset recording)
+
+---
+
 ## Build / environment issues encountered
 
 | Error | Cause | Fix |
