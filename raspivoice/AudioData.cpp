@@ -12,6 +12,13 @@
 #include <stdexcept>
 #include <iostream>
 #include <sstream>
+#include <csignal>
+#include <fcntl.h>
+#include <unistd.h>
+
+#ifndef F_SETPIPE_SZ
+#define F_SETPIPE_SZ 1031
+#endif
 
 #include "AudioData.h"
 
@@ -25,13 +32,55 @@ AudioData::AudioData(int card_number, int sample_freq_Hz, int sample_count, bool
 	CardNumber(card_number),
 	samplebuffer(std::vector<uint16_t>((use_stereo ? 2 : 1) * sample_count)),
 	volume(-1),
-	newvolume(-1)
+	newvolume(-1),
+	aplay_pipe_(nullptr),
+	pipe_card_(-1)
 {
+}
+
+AudioData::~AudioData()
+{
+	closePipe();
 }
 
 void AudioData::Init()
 {
 	pthread_mutex_init(&audio_mutex, NULL);
+	// A dead aplay must not kill us with SIGPIPE on fwrite().
+	signal(SIGPIPE, SIG_IGN);
+}
+
+void AudioData::ensurePipeOpen()
+{
+	if (aplay_pipe_ != nullptr && pipe_card_ == CardNumber) return;
+	closePipe();
+	if (sample_count <= 0) return;
+
+	char cmd[256];
+	snprintf(cmd, sizeof(cmd),
+		"aplay -q -t raw -f S16_LE -c %d -r %d -D plughw:%d 2>/dev/null",
+		use_stereo ? 2 : 1, sample_freq_Hz, CardNumber);
+	if (Verbose) std::cout << cmd << std::endl;
+	aplay_pipe_ = popen(cmd, "w");
+	if (aplay_pipe_ != nullptr)
+	{
+		// Bump the kernel pipe buffer so a full frame always fits and
+		// fwrite() never blocks the producer loop. Two frames gives a
+		// safety margin against scheduling jitter.
+		int frame_bytes = (use_stereo ? 4 : 2) * sample_count;
+		fcntl(fileno(aplay_pipe_), F_SETPIPE_SZ, frame_bytes * 2);
+	}
+	pipe_card_ = CardNumber;
+}
+
+void AudioData::closePipe()
+{
+	if (aplay_pipe_ != nullptr)
+	{
+		pclose(aplay_pipe_);
+		aplay_pipe_ = nullptr;
+		pipe_card_ = -1;
+	}
 }
 
 void AudioData::wi(FILE* fp, uint16_t i)
@@ -80,20 +129,14 @@ void AudioData::Play()
 {
 	updateVolume();
 
-	// Write to temp WAV then launch aplay in the background — returns
-	// immediately so the caller can keep updating the preview display.
-	static const std::string tmpfile = "/tmp/rv_audio.wav";
-	SaveToWavFile(tmpfile);
-
-	std::stringstream cmd;
-	cmd << "aplay -q " << tmpfile << " -D plughw:" << CardNumber << " &";
-	if (Verbose)
-	{
-		std::cout << cmd.str() << std::endl;
-	}
-
 	pthread_mutex_lock(&audio_mutex);
-	system(cmd.str().c_str());
+	ensurePipeOpen();
+	if (aplay_pipe_ != nullptr)
+	{
+		int bytes_per_sample = use_stereo ? 4 : 2;
+		fwrite(samplebuffer.data(), bytes_per_sample, sample_count, aplay_pipe_);
+		fflush(aplay_pipe_);
+	}
 	pthread_mutex_unlock(&audio_mutex);
 }
 
@@ -103,6 +146,7 @@ int AudioData::PlayWav(std::string filename)
 	int status;
 	snprintf(command, 256, "aplay %s -D hw:%d", filename.c_str(), CardNumber);
 	pthread_mutex_lock(&audio_mutex);
+	closePipe(); // release device so external aplay can open it
 	status = system(command);
 	pthread_mutex_unlock(&audio_mutex);
 	return status;
@@ -164,6 +208,7 @@ bool AudioData::Speak(std::string text)
 	int status;
 	snprintf(command, 1023, "espeak --stdout \"%s\" | aplay -q -D plughw:%d", text.c_str(), CardNumber);
 	pthread_mutex_lock(&audio_mutex);
+	closePipe(); // release device so espeak|aplay can open it
 	int res = system(command);
 	pthread_mutex_unlock(&audio_mutex);
 	return (res == 0);
