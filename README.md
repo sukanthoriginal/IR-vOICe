@@ -117,6 +117,10 @@ not the camera.
 - Rewrote `release.mak` / `release_rpi2.mak` to use `pkg-config opencv4`,
   drop hard-coded armv7 flags (so it builds on aarch64), and pull in
   only `ncurses`, `pthread`, `wiringPi`.
+- Crop OV2311 hot column (x=0) in the capture loop so every downstream
+  consumer sees a clean 319-wide frame. Diagnosed via `--dark_capture`.
+- Suppress the upstream vOICe "scan-start click" by default (`--no_click`
+  is now the default; pass `--no_click=0` to re-enable if needed).
 
 ## Tuning the soundscape
 
@@ -133,6 +137,8 @@ not the camera.
 | `-n` / `--negative_image`             | Invert image (useful for IR where hot = bright)      |
 | `--read_frames=N`                     | Frames drained from V4L2 buffer before processing. Default is 5 — **do not lower this.** The camera buffers frames while audio plays; without draining them you get 3-4s stale-frame lag. |
 | `-e N` / `--exposure=N`               | Camera exposure. See **Exposure** section below. |
+| `--no_click` (default)                | Suppress the ~1 ms left-channel tick at the start of each scan. Upstream vOICe uses it as an auditory anchor; we disable it because it's distracting. |
+| `--dark_capture`                      | Debug: average 30 dark frames, dump per-column brightness stats, save to `/tmp/dark_frame.png`, and exit. Cover the lens first. |
 
 For IR specifically, `-n` is often what you want — thermal pictures show
 heat as bright pixels, but vOICe maps brightness to loudness. Inverting
