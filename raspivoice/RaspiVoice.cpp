@@ -320,6 +320,13 @@ cv::Mat RaspiVoice::readImage()
 			processedImage = rawImage;
 		else
 			cv::cvtColor(rawImage, processedImage, cv::COLOR_BGR2GRAY);
+
+		// Drop the leftmost 1px column — a known hot column on this OV2311 sensor
+		// always reads bright regardless of light. Clone to ensure contiguous memory.
+		if (processedImage.cols > 1)
+		{
+			processedImage = processedImage(cv::Rect(1, 0, processedImage.cols - 1, processedImage.rows)).clone();
+		}
 	}
 
 	return processedImage;
@@ -328,8 +335,7 @@ cv::Mat RaspiVoice::readImage()
 
 void RaspiVoice::processImage(cv::Mat rawImage)
 {
-	// Crop 1px from left edge to remove persistent hot column artifact.
-	cv::Mat processedImage = rawImage(cv::Rect(1, 0, rawImage.cols - 1, rawImage.rows));
+	cv::Mat processedImage = rawImage;
 
 	if (verbose)
 	{
