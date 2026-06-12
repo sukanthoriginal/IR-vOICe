@@ -16,6 +16,8 @@
 #include <thread>
 #include <cmath>
 #include <cinttypes>
+#include <cstdio>
+#include <vector>
 #include <unistd.h>
 #include <pthread.h>
 #include <ncurses.h>
@@ -23,11 +25,18 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/videoio.hpp>
+
 #include "printtime.h"
 #include "Options.h"
 #include "RaspiVoice.h"
 #include "KeyboardInput.h"
 #include "AudioData.h"
+
+static int run_dark_capture(const RaspiVoiceOptions &opt);
 
 void *run_worker_thread(void *arg);
 bool setup_screen(void);
@@ -55,6 +64,11 @@ int main(int argc, char *argv[])
 	}
 
 	cmdline_opt = GetCommandLineOptions();
+
+	if (cmdline_opt.dark_capture)
+	{
+		return run_dark_capture(cmdline_opt);
+	}
 
 	if (cmdline_opt.daemon)
 	{
@@ -359,4 +373,112 @@ void daemon_startup(void)
 		fprintf(fp_pid, "%d\n", getpid());
 		fclose(fp_pid);
 	}
+}
+
+static int run_dark_capture(const RaspiVoiceOptions &opt)
+{
+	const int cam_id = (opt.image_source >= 2) ? (opt.image_source - 2) : 0;
+	const int warmup = 10;
+	const int frames = 30;
+	const std::string out_path = "/tmp/dark_frame.png";
+
+	// Force manual exposure at the top of our usable range so hot pixels are bright.
+	const int exp_v4l2 = ((opt.exposure >= 1) && (opt.exposure <= 100))
+		? opt.exposure * 10
+		: 150;
+	char v4l2cmd[160];
+	snprintf(v4l2cmd, sizeof(v4l2cmd),
+		"v4l2-ctl -d /dev/video%d --set-ctrl=auto_exposure=1 --set-ctrl=exposure_time_absolute=%d 2>/dev/null",
+		cam_id, exp_v4l2);
+	system(v4l2cmd);
+
+	std::cout << "dark_capture: /dev/video" << cam_id
+		<< "  exposure_time_absolute=" << exp_v4l2 << " (" << (exp_v4l2 / 10) << " ms)" << std::endl;
+	std::cout << "Cover the lens completely. Capture starts in 2s..." << std::endl;
+	sleep(2);
+
+	cv::VideoCapture cap;
+	cap.open(cam_id, cv::CAP_V4L2);
+	if (!cap.isOpened())
+	{
+		std::cerr << "dark_capture: could not open /dev/video" << cam_id << std::endl;
+		return -1;
+	}
+	cap.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'));
+	cv::Mat dummy;
+	cap.read(dummy);
+	cap.set(cv::CAP_PROP_FRAME_WIDTH, 320);
+	cap.set(cv::CAP_PROP_FRAME_HEIGHT, 240);
+
+	cv::Mat frame;
+	for (int i = 0; i < warmup; ++i)
+	{
+		if (!cap.read(frame))
+		{
+			std::cerr << "dark_capture: warm-up read failed at frame " << i << std::endl;
+			return -1;
+		}
+	}
+
+	std::cout << "Averaging " << frames << " dark frames..." << std::endl;
+	cv::Mat accum;
+	for (int i = 0; i < frames; ++i)
+	{
+		if (!cap.read(frame))
+		{
+			std::cerr << "dark_capture: read failed at frame " << i << std::endl;
+			return -1;
+		}
+		cv::Mat gray;
+		if (frame.channels() == 3)
+			cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
+		else
+			gray = frame;
+		cv::Mat grayF;
+		gray.convertTo(grayF, CV_32F);
+		if (accum.empty())
+			accum = grayF.clone();
+		else
+			accum += grayF;
+	}
+	accum /= static_cast<float>(frames);
+
+	cv::Mat avg8;
+	accum.convertTo(avg8, CV_8U);
+	if (!cv::imwrite(out_path, avg8))
+	{
+		std::cerr << "dark_capture: failed to write " << out_path << std::endl;
+		return -1;
+	}
+
+	const double global_mean = cv::mean(avg8)[0];
+	std::vector<double> col_means(avg8.cols);
+	double max_col_mean = 0.0;
+	int max_col = 0;
+	for (int x = 0; x < avg8.cols; ++x)
+	{
+		double m = cv::mean(avg8.col(x))[0];
+		col_means[x] = m;
+		if (m > max_col_mean) { max_col_mean = m; max_col = x; }
+	}
+
+	std::cout << std::endl;
+	std::cout << "Saved averaged dark frame: " << out_path
+		<< "  (" << avg8.cols << "x" << avg8.rows << ")" << std::endl;
+	std::cout << "Global mean brightness: " << global_mean << std::endl;
+	std::cout << "Brightest column: " << max_col
+		<< "  mean=" << max_col_mean
+		<< "  delta=" << (max_col_mean - global_mean) << std::endl;
+	std::cout << std::endl;
+	std::cout << "Per-column mean (HOT = >5.0 above global):" << std::endl;
+	for (int x = 0; x < avg8.cols; ++x)
+	{
+		printf("col %3d: %6.2f", x, col_means[x]);
+		if (col_means[x] - global_mean > 5.0)
+			printf("  <-- HOT");
+		printf("\n");
+	}
+
+	cap.release();
+	return 0;
 }
