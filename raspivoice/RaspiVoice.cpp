@@ -66,8 +66,15 @@ void* RaspiVoice::captureLoop(void* self)
 		rv->cap.read(frame);
 		if (!frame.empty())
 		{
+			// OV2311 has a persistent hot column at x=0 (dark-frame mean 69.5
+			// vs ~37 at x=1). Drop it at the source so every downstream
+			// consumer — raw preview, vOICe algorithm, PlayFrame refresh —
+			// sees the cleaned frame. clone() makes the data contiguous.
+			cv::Mat cropped = (frame.cols > 1)
+				? frame(cv::Rect(1, 0, frame.cols - 1, frame.rows)).clone()
+				: frame.clone();
 			pthread_mutex_lock(&rv->rawFrameMutex_);
-			rv->latestRawFrame_ = frame.clone();
+			rv->latestRawFrame_ = cropped;
 			pthread_mutex_unlock(&rv->rawFrameMutex_);
 		}
 	}
