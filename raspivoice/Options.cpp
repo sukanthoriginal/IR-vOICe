@@ -49,7 +49,7 @@ static struct option long_getopt_options[] =
 	{ "use_rotary_encoder", no_argument, 0, 'A' },
 	{ "speak", no_argument, 0, 'S' },
 	{ "dark_capture", no_argument, 0, 'k' },
-	{ "no_click", no_argument, 0, 'j' },
+	{ "with_click", no_argument, 0, 'j' },
 	{ 0, 0, 0, 0 }
 };
 
@@ -97,7 +97,7 @@ RaspiVoiceOptions GetDefaultOptions()
 	opt.use_rotary_encoder = false;
 	opt.speak = false;
 	opt.dark_capture = false;
-	opt.no_click = false;
+	opt.no_click = true; // suppress upstream left-channel scan-start tick by default
 
 	opt.quit = false;
 
@@ -234,7 +234,7 @@ bool SetCommandLineOptions(int argc, char *argv[])
 				opt.dark_capture = true;
 				break;
 			case 'j':
-				opt.no_click = true;
+				opt.no_click = false;
 				break;
 			default:
 				std::cout << "Type raspivoice --help for available options." << std::endl;
@@ -304,6 +304,6 @@ void ShowHelp()
 	std::cout << "-N  --use_bspline=[1]" << std::endl;
 	std::cout << "-Z  --sample_freq_Hz=[48000]" << std::endl;
 	std::cout << "    --dark_capture\t\t\tDebug: capture an averaged dark frame, dump per-column stats to stdout, save PNG to /tmp/dark_frame.png, exit. Cover the lens before running." << std::endl;
-	std::cout << "    --no_click\t\t\t\tSuppress the upstream vOICe left-channel \"scan start\" noise burst (~1 ms tick at the start of every frame)." << std::endl;
+	std::cout << "    --with_click\t\t\tRestore the upstream vOICe left-channel \"scan start\" noise burst (~1 ms tick at the start of every frame). Suppressed by default." << std::endl;
 	std::cout << std::endl;
 }
