@@ -328,7 +328,8 @@ cv::Mat RaspiVoice::readImage()
 
 void RaspiVoice::processImage(cv::Mat rawImage)
 {
-	cv::Mat processedImage = rawImage;
+	// Crop 1px from left edge to remove persistent hot column artifact.
+	cv::Mat processedImage = rawImage(cv::Rect(1, 0, rawImage.cols - 1, rawImage.rows));
 
 	if (verbose)
 	{
