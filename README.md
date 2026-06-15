@@ -13,8 +13,8 @@ camera instead of the Pi CSI camera.
   <tr>
     <td width="50%"><img src="images/wearable-setup.png" alt="Wearable setup: head-mounted IR camera + earphones" width="100%"></td>
     <td width="50%" valign="top">
-      <img src="images/right-image.png" alt="IR view of the room" width="100%"><br>
-      <img src="images/right-image2.png" alt="IR view of the room with IR illumination" width="100%">
+      <img src="images/right-image2.png" alt="IR view of the room with IR illumination" width="100%"><br>
+      <img src="images/right-image.png" alt="IR view of the room" width="100%">
     </td>
   </tr>
 </table>
