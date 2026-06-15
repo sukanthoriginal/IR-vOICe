@@ -2,8 +2,7 @@
 
 Sensory substitution: an **infrared camera** feeds a live image into the
 [vOICe](https://www.seeingwithsound.com/) algorithm, which turns it into a
-soundscape played through headphones. The aim is to let a blind user _hear_
-thermal/IR scenes.
+soundscape played through headphones. The aim is to let a user _see_ IR scenes.
 
 Built on top of [seeingwithsound/raspivoice](https://github.com/seeingwithsound/raspivoice)
 (P.B.L. Meijer's hificode port), with patches so it builds on modern
