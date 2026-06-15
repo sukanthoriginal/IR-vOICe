@@ -9,7 +9,7 @@ Built on top of [seeingwithsound/raspivoice](https://github.com/seeingwithsound/
 Raspberry Pi OS (Bookworm, 64-bit, OpenCV 4) and reads from a USB IR
 camera instead of the Pi CSI camera.
 
-![Wearable setup: head-mounted IR camera + earphones](images/wearable-setup.png)
+<img src="images/wearable-setup.png" alt="Wearable setup: head-mounted IR camera + earphones" width="50%">
 
 ## Hardware
 
