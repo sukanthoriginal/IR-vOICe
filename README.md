@@ -9,6 +9,8 @@ Built on top of [seeingwithsound/raspivoice](https://github.com/seeingwithsound/
 Raspberry Pi OS (Bookworm, 64-bit, OpenCV 4) and reads from a USB IR
 camera instead of the Pi CSI camera.
 
+![Wearable setup: head-mounted IR camera + earphones](images/wearable-setup.png)
+
 ## Hardware
 
 - Raspberry Pi 4 (tested) running Pi OS Bookworm 64-bit
@@ -186,6 +188,17 @@ intervention, while never going outside the range known to work.
 
 The current exposure value and equivalent time are shown in the **info panel**
 on the right side of the preview window (`-p` flag).
+
+**Why an IR illuminator matters indoors.** Left: raw IR / vOICe input under
+ambient indoor lighting only — the scene is almost entirely black because the
+780nm long-pass filter blocks most visible light. Right: same scene with a
+dedicated IR source — the room becomes legible.
+
+Indoors, ambient only:
+![Indoor IR capture without an IR illuminator](images/no-IR-source-light.png)
+
+Indoors, with a dedicated IR illuminator:
+![Indoor IR capture with an IR illuminator](images/with-IR-source-light.png)
 
 ## Troubleshooting
 
