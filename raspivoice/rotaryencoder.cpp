@@ -5,6 +5,7 @@ rotaryencoder by astine
 http://theatticlight.net/posts/Reading-a-Rotary-Encoder-from-a-Raspberry-Pi/
 https://github.com/astine/rotaryencoder
 */
+#ifndef NO_HW_INPUT
 #include <wiringPi.h>
 
 #include <stdio.h>
@@ -85,3 +86,4 @@ struct encoder *setupencoder(int pin_a, int pin_b, int pin_switch = -1)
 
 	return newencoder;
 }
+#endif

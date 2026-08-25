@@ -1,6 +1,5 @@
 #include <sstream>
 #include <ncurses.h>
-#include <linux/input.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -8,7 +7,10 @@
 #include <vector>
 #include <stdexcept>
 #include <iostream>
+#ifndef NO_HW_INPUT
+#include <linux/input.h>
 #include <wiringPi.h>
+#endif
 
 #include "Options.h"
 #include "KeyboardInput.h"
@@ -34,6 +36,7 @@ KeyboardInput::KeyboardInput() :
 }
 
 
+#ifndef NO_HW_INPUT
 void KeyboardInput::setupRotaryEncoder()
 {
 	wiringPiSetup();
@@ -54,7 +57,7 @@ int KeyboardInput::readRotaryEncoder()
 			{
 				printf("\nlastEncoderValue: %ld, new encoder value: %ld\n", lastEncoderValue, l);
 			}
-			
+
 			if (l > lastEncoderValue)
 			{
 				ch = (int)MenuKeys::NextOption;
@@ -75,13 +78,24 @@ int KeyboardInput::readRotaryEncoder()
 				printf("\nlastSwitchPressCount: %ld, new switchpresscount: %ld\n", lastSwitchPressCount, l);
 			}
 			ch = (int)MenuKeys::CycleValue;
-			
+
 			lastSwitchPressCount = l;
 		}
 	}
 
 	return ch;
 }
+#else
+void KeyboardInput::setupRotaryEncoder()
+{
+	throw(std::runtime_error("Rotary encoder input not supported on this build (NO_HW_INPUT)."));
+}
+
+int KeyboardInput::readRotaryEncoder()
+{
+	return ERR;
+}
+#endif
 
 bool KeyboardInput::SetInputType(InputType inputType, std::string keyboard)
 {
@@ -102,6 +116,7 @@ bool KeyboardInput::SetInputType(InputType inputType, std::string keyboard)
 	return true;
 }
 
+#ifndef NO_HW_INPUT
 bool KeyboardInput::grabKeyboard(std::string event_device_ids)
 {
 	std::istringstream iss(event_device_ids);
@@ -142,6 +157,16 @@ void KeyboardInput::ReleaseKeyboard()
 		}
 	}
 }
+#else
+bool KeyboardInput::grabKeyboard(std::string event_device_ids)
+{
+	return false;
+}
+
+void KeyboardInput::ReleaseKeyboard()
+{
+}
+#endif
 
 
 int KeyboardInput::ReadKey()
@@ -154,6 +179,7 @@ int KeyboardInput::ReadKey()
 	{
 		return getch();
 	}
+#ifndef NO_HW_INPUT
 	else if (inputType == InputType::Keyboard)
 	{
 		for (int i = 0; i < fevdev.size(); i++)
@@ -181,6 +207,7 @@ int KeyboardInput::ReadKey()
 		}
 		return ERR;
 	}
+#endif
 	else if (inputType == InputType::RotaryEncoder)
 	{
 		return readRotaryEncoder();
@@ -399,6 +426,7 @@ std::string KeyboardInput::KeyPressedAction(int ch)
 }
 
 
+#ifndef NO_HW_INPUT
 int KeyboardInput::keyEventMap(int event_code)
 {
 	if (Verbose)
@@ -520,6 +548,7 @@ int KeyboardInput::keyEventMap(int event_code)
 
 	return ch;
 }
+#endif
 
 int KeyboardInput::changeIndex(int i, int maxindex, int changevalue)
 {

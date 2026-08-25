@@ -23,6 +23,16 @@ error:
 	$(error Invalid configuration, please check your inputs)
 endif
 
+# GNU ld archive-group syntax (--start-group/--end-group) isn't understood by
+# Apple's linker; only emit it for Linux configs (release.mak/release_rpi2.mak).
+ifeq ($(IS_LINUX_PROJECT),1)
+START_GROUP := -Wl,--start-group
+END_GROUP := -Wl,--end-group
+else
+START_GROUP :=
+END_GROUP :=
+endif
+
 SOURCEFILES := AudioData.cpp ImageToSoundscape.cpp KeyboardInput.cpp Options.cpp printtime.cpp rotaryencoder.cpp RaspiVoice.cpp RaspiVoiceMain.cpp DatasetRecorder.cpp
 EXTERNAL_LIBS := 
 EXTERNAL_LIBS_COPIED := $(foreach lib, $(EXTERNAL_LIBS),$(BINARYDIR)/$(notdir $(lib)))
